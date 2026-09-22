@@ -197,6 +197,9 @@ if orderbook_data:
 # Get Nansen top-holder data
 print("\n🐋 Loading Nansen top holders...")
 
+
+holders = []
+
 top_holders_data = nansen_post(
     "top-holders",
     {
@@ -246,7 +249,59 @@ if top_holders_data:
     else:
         print("No top-holder data returned by Nansen.")
 
-# Get Nansen market trade flow
+
+
+# Wallet concentration risk
+if holders:
+    top_positions = [
+        float(holder.get("position_size", 0) or 0)
+        for holder in holders
+    ]
+
+    total_top_positions = sum(top_positions)
+    largest_position = max(top_positions) if top_positions else 0
+
+    if total_top_positions > 0:
+        largest_holder_share = (
+            largest_position / total_top_positions
+        ) * 100
+    else:
+        largest_holder_share = 0
+
+    print("\n⚠️ WALLET CONCENTRATION CHECK")
+    print("=" * 60)
+    print(
+        f"Largest holder share of sampled top-holder positions: "
+        f"{largest_holder_share:.1f}%"
+    )
+
+    if largest_holder_share >= 50:
+        concentration_risk = "HIGH"
+        print("Concentration Risk: HIGH")
+        print(
+            "One wallet represents a very large share of the "
+            "sampled top-holder positioning."
+        )
+    elif largest_holder_share >= 30:
+        concentration_risk = "ELEVATED"
+        print("Concentration Risk: ELEVATED")
+        print(
+            "A single wallet represents a significant share of "
+            "the sampled top-holder positioning."
+        )
+    else:
+        concentration_risk = "LOW"
+        print("Concentration Risk: LOW")
+        print(
+            "No single wallet dominates the sampled top-holder "
+            "positioning."
+        )
+
+    print(
+        "Note: concentration can increase market sensitivity to "
+        "large-wallet activity; it does not prove manipulation."
+    )
+    print("=" * 60)# Get Nansen market trade flow
 print("\n🔄 Loading Nansen market trade flow...")
 
 trades_data = nansen_post(
@@ -649,6 +704,11 @@ if "matched_profitable_holders" in locals():
     print(
         f"• Positive-PnL Holder Overlap: "
         f"{len(matched_profitable_holders)}"
+    )
+if "concentration_risk" in locals():
+    print(
+        f"• Wallet Concentration Risk: {concentration_risk} "
+        f"({largest_holder_share:.1f}% largest sampled holder)"
     )
 
 print("\nSETUP")
